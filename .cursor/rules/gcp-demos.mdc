@@ -1,0 +1,273 @@
+# GCP Demo Workspace Rules
+
+## Project Overview
+This workspace contains educational demos for Google Cloud Platform services. Demos may cover any GCP service including BigQuery, Dataflow, Pub/Sub, Dataplex, AlloyDB, Cloud SQL, Vertex AI, Cloud Storage, and more. Each demo should be:
+- Educational and easy to follow
+- Self-contained with clear prerequisites
+- Working out-of-the-box with minimal configuration
+- Cost-conscious with proper cleanup instructions
+
+## Code Simplicity Philosophy
+
+### Keep It Simple and Focused
+- **Implement only what's explicitly requested** - Don't add "nice to have" features or anticipate future needs
+- **Avoid over-engineering** - Choose the simplest solution that meets the requirements
+- **No speculative features** - If a feature isn't listed or explicitly requested, don't implement it
+- **Minimal abstractions** - Only create abstractions when there's clear, immediate benefit
+
+### Implementation Boundaries
+- **Stick to the scope** - If asked to add a specific feature, don't also add related features unless specified
+- **No "while we're here" additions** - Resist the urge to refactor unrelated code or add convenience features
+- **Direct solutions** - Prefer straightforward implementations over clever or complex ones
+- **Question scope creep** - If you're unsure whether something is within scope, ask rather than assume
+
+### Code Style Preferences
+- **Readable over clever** - Write code that's easy to understand and maintain
+- **Standard patterns** - Use established patterns rather than inventing new approaches
+- **Minimal dependencies** - Don't add new libraries unless absolutely necessary
+- **Conservative approach** - When in doubt, choose the simpler, more conservative option
+
+### What NOT to Add Unless Requested
+- Logging frameworks or extensive logging
+- Caching layers or performance optimizations
+- Additional validation beyond basic requirements
+- UI enhancements or styling improvements
+- Error handling beyond standard practices
+- Configuration systems or feature flags
+- Monitoring or analytics
+- Documentation beyond inline comments
+
+### When to Ask First
+- If you think a feature needs additional functionality to work properly
+- When requirements seem incomplete or ambiguous
+- If implementing exactly as requested might cause issues
+- When you're tempted to add "obvious" missing pieces
+
+**Remember: It's better to deliver exactly what was asked for than to deliver more than requested.**
+
+## Python Code Style
+
+### PEP 8 Compliance
+- Use PEP 8 compliant code
+- Variable names should be descriptive and use snake_case
+- Constants should be UPPER_CASE
+- Add type hints where it improves clarity
+- Keep functions small and focused (max 20 lines)
+- Use f-strings for string formatting
+
+### Comments and Documentation
+- Do NOT add comments that just narrate what the code does
+- Avoid obvious, redundant comments like "// Import the module", "// Define the function", "// Increment the counter"
+- Comments should only explain non-obvious intent, trade-offs, or constraints that the code itself cannot convey
+- NEVER explain the change you are making in code comments
+
+## GCP-Specific Patterns
+
+### Authentication Pattern
+Always include authentication verification at the start of demos:
+
+```python
+from google.auth import default
+from google.auth.exceptions import DefaultCredentialsError
+
+try:
+    credentials, project = default()
+    print(f"✅ Authenticated with project: {project}")
+except DefaultCredentialsError as e:
+    print(f"❌ Authentication failed: {e}")
+    print("Please run: gcloud auth application-default login")
+    raise
+```
+
+### Configuration Variables
+Every demo should start with a clear configuration section:
+
+```python
+# Configuration - UPDATE THESE VALUES
+PROJECT_ID = "your-project-id"  # Example: "my-gcp-project-123"
+REGION = "us-central1"          # Example: "us-central1", "us-east1"
+
+# Demo-specific configuration
+# Add service-specific variables here (dataset names, bucket names, etc.)
+```
+
+**Rules:**
+- Always provide example values in comments
+- Use clear variable names that indicate purpose
+- Separate universal config (PROJECT_ID, REGION) from demo-specific config
+- Validate that users have updated placeholder values before proceeding
+
+### Dependency Management
+Each demo declares its own dependencies:
+
+```python
+# Install required packages
+!pip install -q \
+    google-cloud-bigquery>=3.0.0 \
+    google-cloud-storage>=2.0.0 \
+    pandas>=1.3.0
+
+# Import libraries
+from google.cloud import bigquery, storage
+import pandas as pd
+```
+
+**Rules:**
+- Use specific version constraints (>=) for stability
+- Group related packages together
+- Install quietly with `-q` flag to reduce noise
+- Import immediately after installation to verify
+
+### API Enablement Pattern
+Guide users to enable required APIs:
+
+```python
+# Required APIs for this demo
+required_apis = [
+    "bigquery.googleapis.com",
+    "storage.googleapis.com",
+    "dataplex.googleapis.com"
+]
+
+print("🔧 Required APIs:")
+for api in required_apis:
+    print(f"  - {api}")
+print("\nEnable with: gcloud services enable " + " ".join(required_apis))
+```
+
+### IAM Permission Pattern
+Be explicit about required permissions:
+
+```python
+# Required IAM roles for this demo:
+# - roles/bigquery.admin (to create datasets and tables)
+# - roles/storage.objectViewer (to read from GCS)
+# - roles/dataplex.admin (to record lineage)
+
+# Verify current permissions
+print("Check your roles with:")
+print(f"gcloud projects get-iam-policy {PROJECT_ID} --flatten='bindings[].members' --filter='bindings.members:user:YOUR_EMAIL'")
+```
+
+### Error Handling Pattern
+Use consistent error handling with helpful messages:
+
+```python
+try:
+    # Main operation
+    result = client.some_operation()
+    print(f"✅ Success: {result}")
+except Exception as e:
+    print(f"❌ Error: {type(e).__name__}: {e}")
+    print("\nPossible solutions:")
+    print("1. Check authentication: gcloud auth list")
+    print("2. Verify API is enabled")
+    print("3. Check IAM permissions")
+    raise
+```
+
+### Progress Messages
+Always include clear progress indicators using emojis:
+
+```python
+print("🔄 Starting operation...")
+# operation code
+print("✅ Operation completed successfully!")
+```
+
+**Standard emoji patterns:**
+- 🔄 = In progress / working
+- ✅ = Success / completed
+- ❌ = Error / failed
+- 📋 = Configuration / list
+- 📊 = Data / results
+- 🔧 = Setup / tools
+- ⚠️ = Warning / important note
+- 💡 = Tip / helpful information
+- 👉 = Action required from user
+- 🧹 = Cleanup / deletion
+
+### Cleanup Pattern
+**CRITICAL**: Every demo MUST include a cleanup section to avoid unexpected charges:
+
+```python
+# 🧹 Cleanup Resources
+# IMPORTANT: Run this section to avoid ongoing charges
+
+print("⚠️ This will delete:")
+print(f"  - BigQuery dataset: {DATASET_ID}")
+print(f"  - GCS bucket: {BUCKET_NAME}")
+print("  - Any associated data")
+
+# Uncomment to execute cleanup
+# client.delete_dataset(dataset_id, delete_contents=True)
+# bucket.delete(force=True)
+# print("✅ Cleanup completed")
+```
+
+**Rules:**
+- Always include cleanup code, even if commented out
+- List exactly what will be deleted
+- Provide clear warnings about data loss
+- Make cleanup easy to execute (just uncomment)
+
+### Checkpoint Pattern
+Include verification checkpoints after major steps:
+
+```python
+# Checkpoint: Verify configuration
+assert PROJECT_ID != "your-project-id", "❌ Please update PROJECT_ID with your actual project"
+assert REGION, "❌ REGION must be set"
+print("✅ Checkpoint passed: Configuration validated")
+```
+
+## Resource Management
+
+### Cost Awareness
+- Always mention approximate costs in demo documentation
+- Use minimal resource sizes appropriate for demos
+- Set timeouts and limits to prevent runaway costs
+- Include cleanup instructions prominently
+
+### Quotas and Limits
+- Be aware of common quota limits
+- Provide error messages that help debug quota issues
+- Suggest checking quotas when operations fail
+
+### Regional Resources
+- Use consistent regions across related resources
+- Document region-specific limitations
+- Consider multi-region options when appropriate
+
+## Testing and Quality
+
+### Before Demo Completion
+Verify these requirements:
+- [ ] Runs end-to-end without errors
+- [ ] All configuration variables have example values
+- [ ] Authentication is verified upfront
+- [ ] Required APIs are documented
+- [ ] IAM permissions are listed
+- [ ] Error handling provides helpful troubleshooting
+- [ ] Progress messages are clear and emoji-coded
+- [ ] Cleanup section is present and clear
+- [ ] Timing is reasonable (typically 15-25 minutes)
+- [ ] Documentation is accurate
+
+### Documentation Standards
+- Keep explanations clear and concise
+- Use diagrams for complex architectures
+- Link to official GCP documentation
+- Provide working examples, not pseudocode
+
+## Resource Links
+
+### Always Include These General Resources
+- [Google Cloud Console](https://console.cloud.google.com)
+- [GCP Documentation](https://cloud.google.com/docs)
+- [Python Client Libraries](https://cloud.google.com/python/docs/reference)
+- [GCP Pricing Calculator](https://cloud.google.com/products/calculator)
+- [GCP Free Tier](https://cloud.google.com/free)
+
+### Add Service-Specific Links
+Include documentation links specific to the services used in each demo.

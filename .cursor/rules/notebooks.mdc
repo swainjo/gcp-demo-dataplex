@@ -1,0 +1,326 @@
+---
+globs: ["**/*.ipynb"]
+---
+
+# Jupyter Notebook Structure for GCP Demos
+
+## Overview
+These rules apply to all Jupyter notebooks in this workspace. Each notebook should follow a consistent structure that makes demos easy to understand, execute, and maintain.
+
+## Notebook Structure Standards
+
+### Required Sections
+Every GCP demo notebook must include these sections in order:
+
+1. **Introduction & Overview** (one markdown cell)
+   - Clear title describing what the demo does
+   - Brief overview of the architecture or data flow
+   - Key learning objectives (3-5 bullet points)
+   - Time estimate for completion
+   - Prerequisites or assumptions
+
+2. **Configuration & Authentication** (markdown + code cells)
+   - Configuration variables clearly marked for user to update
+   - Authentication verification
+   - Project ID and region setup
+
+3. **Prerequisites Setup** (markdown + code cells)
+   - API enablement instructions
+   - IAM permission requirements
+   - Any infrastructure prerequisites (networks, buckets, etc.)
+
+4. **Core Demo Steps** (multiple sections, each with markdown + code)
+   - Break into logical subsections
+   - Each subsection should take 2-5 minutes
+   - Clear progression from setup to completion
+
+5. **Verification** (markdown + code cells)
+   - Verify the demo worked correctly
+   - Show results, data, or output
+   - Validate expected state
+
+6. **Cleanup** (markdown + code cells)
+   - List all resources that will be deleted
+   - Provide clear warnings about data loss
+   - Include cleanup code (commented out by default)
+
+### Markdown Cell Guidelines
+
+#### Section Headers
+Use consistent heading hierarchy:
+- `#` for main sections (e.g., "# Section 1: Introduction")
+- `##` for subsections (e.g., "## Understanding the Architecture")
+- `###` for sub-subsections (rare, use sparingly)
+
+**Format for section headers:**
+```markdown
+# Section 1: Setup & Dependencies
+In this section, we'll install the required packages and verify our environment.
+
+**What we'll do:**
+- Install required Python packages
+- Import necessary libraries
+- Verify authentication and project setup
+```
+
+#### Code Explanations
+Explain complex concepts before showing code:
+
+```markdown
+## Understanding the Configuration
+
+The configuration tells the GCP client:
+- **project_id**: Your GCP project identifier
+- **region**: Geographic location for resources (affects latency and cost)
+- **location**: Dataset location (US, EU, or specific region)
+```
+
+#### Tips, Notes, and Warnings
+Use consistent callout formatting:
+
+```markdown
+> **💡 Tip:** You can use different regions, but keep related resources in the same region for better performance.
+
+> **⚠️ Note:** This operation may take 3-5 minutes. The cell is still running if you see [*] next to it.
+
+> **👉 ACTION REQUIRED:** Update the configuration variables below with your own values before proceeding.
+```
+
+#### Architecture Diagrams
+Include text-based architecture diagrams for complex flows:
+
+```markdown
+## Architecture
+
+\`\`\`
+┌─────────────┐     ┌──────────────┐     ┌─────────────┐
+│   Source    │────▶│   Process    │────▶│   Target    │
+│  (Pub/Sub)  │     │  (Dataflow)  │     │  (BigQuery) │
+└─────────────┘     └──────────────┘     └─────────────┘
+\`\`\`
+```
+
+### Code Cell Guidelines
+
+#### Cell Formatting
+- **One logical operation per cell** - Don't combine unrelated operations
+- **Cells should complete in < 30 seconds** - Split long operations
+- **Output should be informative** - Use print statements with clear messages
+
+#### Start Each Section with Markdown
+**NEVER start a section with a code cell.** Always begin with a markdown cell that:
+- Explains what the section will do
+- Provides context for the code
+- Sets expectations for timing or output
+
+#### Progress Messages in Code
+Every significant operation should have progress indicators:
+
+```python
+print("🔄 Creating BigQuery dataset...")
+# operation
+print("✅ Dataset created successfully")
+
+print(f"📊 Dataset: {dataset.dataset_id}")
+print(f"📍 Location: {dataset.location}")
+```
+
+#### Checkpoint Pattern
+After major steps, include validation:
+
+```python
+# Checkpoint: Verify dataset was created
+try:
+    dataset = client.get_dataset(dataset_id)
+    print(f"✅ Checkpoint passed: Dataset {dataset_id} exists")
+except Exception as e:
+    print(f"❌ Checkpoint failed: Dataset not found")
+    raise
+```
+
+#### Configuration Validation
+At the start of the notebook, validate configuration:
+
+```python
+# Validate configuration
+assert PROJECT_ID != "your-project-id", "❌ Update PROJECT_ID with your actual project"
+assert REGION, "❌ REGION must be set"
+print("✅ Configuration validated")
+```
+
+## Timing Guidelines
+
+### Section Duration
+Each section should take approximately:
+- Introduction: 1-2 minutes (reading)
+- Configuration: 2-3 minutes (updating values)
+- Prerequisites: 3-5 minutes (enabling APIs, checking permissions)
+- Core demo steps: 10-15 minutes total (split into 2-5 minute subsections)
+- Verification: 2-3 minutes
+- Cleanup: 1-2 minutes
+
+**Total demo time: 15-25 minutes**
+
+### Include Time Estimates
+Add estimated time in section headers when helpful:
+
+```markdown
+# Section 3: Deploy Dataflow Pipeline (5-7 minutes)
+This section deploys a streaming pipeline. The deployment takes ~5 minutes to complete.
+```
+
+### Handle Long Operations
+For operations that take > 1 minute:
+- Warn users beforehand
+- Explain what's happening
+- Provide expected completion time
+- Consider polling patterns with status updates
+
+```python
+print("🔄 Creating AlloyDB cluster (this takes 8-10 minutes)...")
+print("💡 You can monitor progress in the Cloud Console")
+# operation with polling
+print("✅ Cluster is ready")
+```
+
+## Output Display Standards
+
+### Success Messages
+Format success messages consistently:
+
+```python
+print("✅ Table created successfully!")
+print(f"📊 Loaded {row_count} rows")
+print(f"⏱️ Completed in {duration:.1f} seconds")
+```
+
+### Data Preview
+When showing data results:
+
+```python
+# Show both structure and sample data
+print("\n📋 Table Schema:")
+for field in table.schema:
+    print(f"  - {field.name}: {field.field_type}")
+
+print("\n📊 Sample Data (first 5 rows):")
+display(df.head())
+```
+
+### Error Messages
+Provide helpful troubleshooting context:
+
+```python
+except Exception as e:
+    print(f"❌ Error: {type(e).__name__}")
+    print(f"   Message: {e}")
+    print("\nTroubleshooting:")
+    print("  1. Verify the API is enabled")
+    print("  2. Check IAM permissions")
+    print("  3. Confirm resource names are correct")
+    raise
+```
+
+## User Interaction Points
+
+### Configuration Updates
+Mark where users must take action:
+
+```markdown
+> **👉 ACTION REQUIRED:** Update these configuration variables with your own values:
+> - `PROJECT_ID`: Your GCP project ID
+> - `REGION`: Your preferred region (e.g., "us-central1")
+```
+
+### Optional Steps
+Clearly mark optional content:
+
+```markdown
+## Optional: Visualize Results
+
+This section is optional but recommended for understanding the data distribution.
+```
+
+### Cleanup Warnings
+Make cleanup consequences very clear:
+
+```markdown
+## ⚠️ Cleanup Resources
+
+**WARNING:** This will permanently delete:
+- BigQuery dataset `{DATASET_ID}` and all tables
+- GCS bucket `{BUCKET_NAME}` and all files
+- Dataflow job and associated resources
+
+Only proceed if you're done with the demo and don't need the data.
+```
+
+## Quality Checklist
+
+Before considering a notebook complete, verify:
+
+### Content Quality
+- [ ] Every section starts with explanatory markdown
+- [ ] Code cells include progress messages
+- [ ] Complex operations are explained clearly
+- [ ] Expected outputs are documented
+- [ ] Timing estimates are accurate
+
+### Technical Quality
+- [ ] Runs end-to-end without modification (except config)
+- [ ] All cells execute in order
+- [ ] Error handling is present and helpful
+- [ ] Configuration validation prevents common mistakes
+- [ ] Cleanup section is complete and clear
+
+### Educational Quality
+- [ ] Learning objectives are met
+- [ ] Architecture is explained clearly
+- [ ] Trade-offs and alternatives are discussed when relevant
+- [ ] Links to documentation are provided
+- [ ] Next steps or extensions are suggested
+
+## Best Practices
+
+### Do's
+- ✅ Use descriptive variable names
+- ✅ Include type hints for function signatures
+- ✅ Break complex operations into steps
+- ✅ Show intermediate results to build understanding
+- ✅ Provide context before showing code
+- ✅ Use consistent emoji patterns for messages
+- ✅ Validate user input early
+
+### Don'ts
+- ❌ Don't start sections with code cells
+- ❌ Don't combine unrelated operations in one cell
+- ❌ Don't assume previous knowledge without links
+- ❌ Don't leave long operations without progress indicators
+- ❌ Don't skip cleanup instructions
+- ❌ Don't use overly clever or complex code
+- ❌ Don't add features beyond the demo scope
+
+## Jupyter-Specific Considerations
+
+### Cell Execution Order
+- Cells must work when executed sequentially from top to bottom
+- Never require jumping around or re-executing earlier cells
+- If re-execution is needed, make it explicit with clear instructions
+
+### Output Management
+- Keep output concise and relevant
+- Use `print()` for messages, not relying on implicit output
+- Clear unnecessary outputs that clutter the notebook
+- Use `display()` for formatted tables/dataframes
+
+### Magic Commands
+Use Jupyter magic commands appropriately:
+- `%pip install` or `!pip install` for package installation
+- `%%time` for benchmarking cells
+- Avoid excessive use of magics that reduce portability
+
+### Markdown Formatting
+- Use code blocks with language hints: ```python, ```bash, ```json
+- Format inline code with backticks: `variable_name`
+- Use tables for comparing options
+- Include links to external resources
