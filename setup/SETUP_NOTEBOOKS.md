@@ -1,6 +1,6 @@
 # Setup Notebooks Documentation
 
-This directory contains three Jupyter notebooks for setting up, enhancing, and cleaning up GCP Dataplex demo resources.
+This directory contains four Jupyter notebooks for setting up, enhancing, and cleaning up GCP Dataplex demo resources.
 
 ## config_and_data_setup.ipynb
 
@@ -41,6 +41,88 @@ This directory contains three Jupyter notebooks for setting up, enhancing, and c
   - `roles/bigquery.admin`
   - `roles/dataplex.admin`
   - `roles/dataplex.catalogAdmin`
+
+---
+
+## upload_census_to_gcs.ipynb
+
+**Purpose**: Complete workflow to upload UK Census 2021 dataset (TS001) to Google Cloud Storage and load into BigQuery for analysis.
+
+### What it does:
+
+1. **Configuration & Authentication** (Section 1)
+   - Configures GCP project ID, region, and bucket name
+   - Verifies authentication credentials
+   - Checks required IAM permissions (Cloud Storage Admin, BigQuery Admin)
+   - Installs required libraries (google-cloud-storage, google-cloud-bigquery)
+
+2. **Create GCS Bucket** (Section 2)
+   - Initializes Cloud Storage client
+   - Creates a new GCS bucket in the specified region
+   - Handles cases where bucket already exists gracefully
+   - Provides console link to view bucket
+
+3. **Upload Census Files** (Section 3)
+   - Walks through `source_data/census2021-ts001/` directory
+   - Uploads 7 census CSV files at different geographic levels:
+     - Country (England, Wales)
+     - Region
+     - Upper Tier Local Authority (UTLA)
+     - Lower Tier Local Authority (LTLA)
+     - Middle Layer Super Output Area (MSOA)
+     - Lower Layer Super Output Area (LSOA)
+     - Output Area (OA)
+   - Uploads metadata documentation file
+   - Excludes hidden files (.DS_Store)
+   - Displays upload progress with file sizes
+
+4. **Validation** (Section 4)
+   - Lists all uploaded files from the bucket
+   - Verifies file count matches expected (8 files)
+   - Displays bucket statistics (file count, total size)
+   - Cross-references uploaded files against expected files
+
+5. **Summary & Next Steps** (Section 5)
+   - Displays summary of resources created (both GCS and BigQuery)
+   - Provides console links and command-line examples
+   - Suggests next steps and cleanup instructions
+
+6. **Create BigQuery Dataset** (Section 6)
+   - Installs BigQuery client library
+   - Creates dataset `census_uk_2021` in US location
+   - Handles cases where dataset already exists gracefully
+   - Provides BigQuery Console link
+
+7. **Load CSV from GCS to BigQuery** (Section 7)
+   - Defines table schema with proper data types
+   - Renames CSV columns to be BigQuery-friendly (no spaces)
+   - Loads UTLA census data from GCS to BigQuery table `ts001_utla`
+   - Displays load statistics (rows, table size)
+
+8. **Validation & Query Examples** (Section 8)
+   - Validates row count (175 ULTAs expected)
+   - Previews top 10 local authorities by population
+   - Runs aggregate statistics query
+   - Provides sample SQL queries for further analysis
+   - Displays BigQuery Console links
+
+### Dataset Information
+
+**Census 2021 - TS001**: Number of usual residents in households and communal establishments
+- Source: UK Office for National Statistics (ONS)
+- Release Date: 2022-12-13
+- Coverage: England and Wales
+- Geographic Level Loaded: UTLA (Upper Tier Local Authorities) - 175 rows
+
+### Time Estimate
+10-15 minutes
+
+### Prerequisites
+- GCP project with billing enabled
+- Required IAM roles: 
+  - `roles/storage.admin` (for GCS operations)
+  - `roles/bigquery.admin` (for BigQuery operations)
+- Census data files in `source_data/census2021-ts001/`
 
 ---
 
@@ -159,13 +241,16 @@ This directory contains three Jupyter notebooks for setting up, enhancing, and c
 # 1. Run setup to create demo environment
 jupyter notebook setup/config_and_data_setup.ipynb
 
-# 2. (Optional) Apply business glossary for ISO 11179-compliant metadata
+# 2. (Optional) Upload UK Census 2021 data to GCS
+jupyter notebook setup/upload_census_to_gcs.ipynb
+
+# 3. (Optional) Apply business glossary for ISO 11179-compliant metadata
 jupyter notebook setup/apply_glossary_terms.ipynb
 
-# 3. Explore Dataplex features and test functionality
+# 4. Explore Dataplex features and test functionality
 # ... your demo/testing activities ...
 
-# 4. Run cleanup to remove all resources
+# 5. Run cleanup to remove all resources
 jupyter notebook setup/cleanup_all_resources.ipynb
 ```
 
@@ -173,6 +258,7 @@ jupyter notebook setup/cleanup_all_resources.ipynb
 
 After setup, you can view resources at:
 - **BigQuery Dataset**: `https://console.cloud.google.com/bigquery?project=<PROJECT_ID>&d=census_bureau_acs`
+- **Cloud Storage Bucket**: `https://console.cloud.google.com/storage/browser/<BUCKET_NAME>?project=<PROJECT_ID>`
 - **Dataplex Aspect Types**: `https://console.cloud.google.com/dataplex/govern/aspect-types?project=<PROJECT_ID>`
 - **Dataplex Catalog**: `https://console.cloud.google.com/dataplex/search?project=<PROJECT_ID>`
 - **Business Glossaries**: `https://console.cloud.google.com/dataplex/dp-glossaries?project=<PROJECT_ID>`
