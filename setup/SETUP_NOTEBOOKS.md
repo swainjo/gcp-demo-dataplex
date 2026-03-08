@@ -194,9 +194,73 @@ This directory contains four Jupyter notebooks for setting up, enhancing, and cl
 
 ---
 
+## setup_cloudsql_census.ipynb
+
+**Purpose**: Create and configure a CloudSQL PostgreSQL instance with UK Census 2021 data, and enable Dataplex Universal Catalog integration.
+
+### What it does:
+
+1. **Configuration & Authentication** (Section 1)
+   - Configures GCP project ID, region, and CloudSQL instance settings
+   - Verifies authentication credentials
+   - Installs required libraries (cloud-sql-python-connector, pg8000, sqlalchemy, pandas)
+
+2. **Create CloudSQL PostgreSQL Instance** (Section 2)
+   - Creates a `db-f1-micro` PostgreSQL 15 instance (takes 10-15 minutes)
+   - Configures public IP for demo access
+   - Enables automated backups
+   - Handles cases where instance already exists
+
+3. **Connect and Create Database Schema** (Section 3)
+   - Establishes connection using Cloud SQL Python Connector
+   - Creates `census_data` database
+   - Creates `census_residence_type` table with 8 columns
+   - Adds indexes for query performance
+
+4. **Load Census Data** (Section 4)
+   - Loads UK Census 2021 TS001 data from CSV files
+   - Covers 7 geographic levels (OA, LSOA, MSOA, LTLA, UTLA, RGN, CTRY)
+   - Inserts 232,157 rows total
+   - Displays load progress and statistics
+
+5. **Validate and Query Data** (Section 5)
+   - Verifies row counts by geographic level
+   - Displays sample records
+   - Runs example queries (top areas, statistics, communal residents)
+
+6. **Enable Dataplex Universal Catalog Integration** (Section 6)
+   - Enables Dataplex integration on the CloudSQL instance
+   - Allows automatic metadata cataloging
+   - Verifies integration is enabled
+   - Provides guidance for accessing cataloged metadata (available after 2-48 hours)
+
+7. **Connection Information** (Section 7)
+   - Displays connection details (connection name, public IP, database)
+   - Provides connection strings for PostgreSQL clients
+   - Includes security notes
+
+### Time Estimate
+20-30 minutes (including 10-15 minutes for CloudSQL instance provisioning)
+
+### Prerequisites
+- GCP project with billing enabled
+- Required IAM roles:
+  - `roles/cloudsql.admin` (to create and manage CloudSQL instances)
+  - `roles/compute.networkUser` (for network configuration)
+- Census data files in `source_data/census2021-ts001/`
+
+### Dataplex Integration
+After enabling the integration, the CloudSQL instance, database, and table metadata will automatically appear in Dataplex Universal Catalog within 2-48 hours. You can then:
+- Search for Cloud SQL assets using Dataplex search
+- Enrich metadata with custom aspects
+- Link to business glossary terms
+- Track schema changes over time
+
+---
+
 ## cleanup_all_resources.ipynb
 
-**Purpose**: Complete cleanup notebook to remove all resources created by the setup notebook.
+**Purpose**: Complete cleanup notebook to remove all resources created by the setup notebooks.
 
 ### What it does:
 
@@ -220,7 +284,13 @@ This directory contains four Jupyter notebooks for setting up, enhancing, and cl
    - Removes all ~278 tables and their data
    - Uses `delete_contents=True` to ensure complete cleanup
 
-5. **Cleanup Summary** (Section 5)
+5. **Delete CloudSQL Instance** (Section 8)
+   - Disables Dataplex integration before deletion
+   - Permanently deletes the `census-demo-db` PostgreSQL instance
+   - Waits for deletion to complete (5-10 minutes)
+   - Removes all databases and data
+
+6. **Cleanup Summary** (Section 9)
    - Provides summary of deleted resources
    - Includes console links to verify cleanup
    - Optional instructions for removing IAM permissions
