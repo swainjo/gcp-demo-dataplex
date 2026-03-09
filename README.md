@@ -9,9 +9,10 @@ This collection of Jupyter notebooks demonstrates:
 - **Dataplex Universal Catalog**: Unified metadata management across multiple data sources
 - **Custom Aspect Types**: Enriching data assets with structured metadata
 - **Business Glossaries**: ISO 11179-compliant terminology management
-- **Multi-Source Integration**: Cataloging BigQuery, Cloud Storage, and CloudSQL PostgreSQL
+- **Multi-Source Integration**: Cataloging BigQuery, Cloud Storage, CloudSQL PostgreSQL, and Firestore
 - **Automated Metadata Extraction**: Pattern-based metadata enrichment at scale
 - **Cross-Platform Governance**: Unified view of data assets across GCP services
+- **Firestore as Metadata Store**: Hierarchical metadata storage and retrieval patterns
 
 ## 📊 Datasets
 
@@ -31,6 +32,8 @@ This collection of Jupyter notebooks demonstrates:
   - `roles/dataplex.admin`
   - `roles/dataplex.catalogAdmin`
   - `roles/cloudsql.admin`
+  - `roles/datastore.owner`
+  - `roles/firestore.viewer`
 
 ### Setup Authentication
 
@@ -68,48 +71,60 @@ jupyter notebook
 
 Run the notebooks in this order:
 
-1. **`setup/config_and_data_setup.ipynb`** (10-30 min)
+1. **`setup/01_config_and_data_setup.ipynb`** (10-30 min)
    - Copy US Census data to BigQuery
    - Create custom Dataplex aspect types
    - Apply metadata enrichment
 
-2. **`setup/upload_census_to_gcs.ipynb`** (10-15 min)
+2. **`setup/02_upload_census_to_gcs.ipynb`** (10-15 min)
    - Upload UK Census 2021 to Cloud Storage
    - Load data into BigQuery
 
-3. **`setup/apply_glossary_terms.ipynb`** (15-25 min)
+3. **`setup/03_apply_glossary_terms.ipynb`** (15-25 min)
    - Create business glossary with ISO 11179 principles
    - Generate and link business terms to data assets
 
-4. **`setup/setup_cloudsql_census.ipynb`** (20-30 min)
+4. **`setup/04_setup_cloudsql_census.ipynb`** (20-30 min)
    - Create CloudSQL PostgreSQL instance
    - Load census data
    - Enable Dataplex integration
 
-5. **Explore the Catalog** in [GCP Console](https://console.cloud.google.com/dataplex/search)
+5. **`setup/05_setup_firestore.ipynb`** (10-15 min)
+   - Create Firestore Native Mode database
+   - Create a copy of the CloudSQL census table
+   - Extract and store table metadata in Firestore
 
-6. **`setup/cleanup_all_resources.ipynb`** (15-20 min) ⚠️ **REQUIRED**
+6. **`setup/06_write_firestore_metadata_to_dataplex.ipynb`** (5-8 min)
+   - Read metadata from Firestore
+   - Create custom Dataplex entry group and entry type
+   - Register CloudSQL table in Dataplex Catalog with governance aspect
+
+7. **Explore the Catalog** in [GCP Console](https://console.cloud.google.com/dataplex/search)
+
+8. **`setup/99_cleanup_all_resources.ipynb`** (15-20 min) ⚠️ **REQUIRED**
    - Delete all resources to avoid ongoing charges
 
-**Total Time:** 45-90 minutes for complete setup
+**Total Time:** 55-110 minutes for complete setup
 
 ## 📁 Repository Structure
 
 ```
 gcp-demo-dataplex/
-├── README.md                           # This file
-├── instructions.md                     # Detailed getting started guide
+├── README.md                                        # This file
+├── instructions.md                                  # Detailed getting started guide
 ├── setup/
-│   ├── SETUP_NOTEBOOKS.md             # Detailed notebook documentation
-│   ├── config_and_data_setup.ipynb    # Core BigQuery + Dataplex setup
-│   ├── upload_census_to_gcs.ipynb     # UK Census to GCS & BigQuery
-│   ├── apply_glossary_terms.ipynb     # Business glossary creation
-│   ├── setup_cloudsql_census.ipynb    # CloudSQL + Dataplex integration
-│   └── cleanup_all_resources.ipynb    # Complete resource cleanup
+│   ├── SETUP_NOTEBOOKS.md                          # Detailed notebook documentation
+│   ├── 01_config_and_data_setup.ipynb              # Core BigQuery + Dataplex setup
+│   ├── 02_upload_census_to_gcs.ipynb               # UK Census to GCS & BigQuery
+│   ├── 03_apply_glossary_terms.ipynb               # Business glossary creation
+│   ├── 04_setup_cloudsql_census.ipynb              # CloudSQL + Dataplex integration
+│   ├── 05_setup_firestore.ipynb                    # Firestore setup + CloudSQL metadata storage
+│   ├── 06_write_firestore_metadata_to_dataplex.ipynb  # Write Firestore metadata to Dataplex Catalog
+│   └── 99_cleanup_all_resources.ipynb              # Complete resource cleanup
 └── source_data/
-    └── census2021-ts001/              # UK Census 2021 data files
-        ├── census2021-ts001-*.csv     # CSV files (7 geographic levels)
-        └── metadata/                   # Dataset documentation
+    └── census2021-ts001/                           # UK Census 2021 data files
+        ├── census2021-ts001-*.csv                  # CSV files (7 geographic levels)
+        └── metadata/                               # Dataset documentation
 ```
 
 ## 💰 Cost Considerations
@@ -120,7 +135,8 @@ The demo creates:
 - BigQuery dataset (~278 tables)
 - CloudSQL PostgreSQL instance (db-f1-micro)
 - Cloud Storage bucket
-- Dataplex catalog resources
+- Firestore Native Mode database (free tier)
+- Dataplex catalog resources (aspect types, business glossary, custom entry group/type)
 
 ⚠️ **Important:** CloudSQL instances incur charges even when idle. Always run the cleanup notebook when finished!
 
@@ -134,6 +150,7 @@ After running the setup, explore these resources:
 - [BigQuery Datasets](https://console.cloud.google.com/bigquery)
 - [CloudSQL Instances](https://console.cloud.google.com/sql/instances)
 - [Cloud Storage Buckets](https://console.cloud.google.com/storage/browser)
+- [Firestore Database](https://console.cloud.google.com/firestore/data)
 
 ## 📚 What You'll Learn
 
@@ -148,6 +165,7 @@ After running the setup, explore these resources:
 - BigQuery dataset management
 - Cloud Storage operations
 - CloudSQL PostgreSQL setup and integration
+- Firestore Native Mode database and document modeling
 - Python API clients for GCP services
 - Metadata extraction and pattern matching
 
@@ -172,6 +190,7 @@ gcloud services enable dataplex.googleapis.com
 gcloud services enable bigquery.googleapis.com
 gcloud services enable storage.googleapis.com
 gcloud services enable sqladmin.googleapis.com
+gcloud services enable firestore.googleapis.com
 ```
 
 **Permission Denied:**
@@ -189,6 +208,7 @@ For detailed troubleshooting, see [instructions.md](instructions.md#common-issue
 - **[Setup Notebooks Documentation](setup/SETUP_NOTEBOOKS.md)** - Detailed notebook descriptions
 - [Dataplex Documentation](https://cloud.google.com/dataplex/docs)
 - [Dataplex Universal Catalog](https://cloud.google.com/dataplex/docs/catalog)
+- [Firestore Documentation](https://cloud.google.com/firestore/docs)
 - [ISO 11179 Standard](https://www.iso.org/standard/50340.html)
 
 ## 🤝 Contributing
@@ -205,10 +225,11 @@ Found an issue or have a suggestion?
 ## ⚠️ Important Reminders
 
 - **Run notebooks in order** - They build on each other
-- **Complete the cleanup notebook** - Avoid unnecessary charges
+- **Complete the cleanup notebook** - `99_cleanup_all_resources.ipynb` avoids unnecessary charges
 - **Monitor CloudSQL costs** - Most expensive resource in the demo
 - **Wait for long operations** - CloudSQL creation takes 10-15 minutes
 - **Check billing alerts** - Set up budget alerts in your project
+- **Firestore is free tier** - Stays within free limits for this demo
 
 ## 📝 License
 

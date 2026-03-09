@@ -19,7 +19,8 @@ The demo setup creates:
 - BigQuery dataset with ~278 tables (US Census data)
 - CloudSQL PostgreSQL instance (db-f1-micro)
 - Cloud Storage bucket with UK Census 2021 data
-- Dataplex catalog resources (aspect types, business glossary)
+- Firestore Native Mode database (free tier - no additional cost)
+- Dataplex catalog resources (aspect types, business glossary, custom entry group/type)
 
 **Estimated costs**: $10-20 to run the complete demo if cleaned up within 24 hours. However:
 - **Always complete the cleanup notebook** to avoid ongoing charges (especially CloudSQL)
@@ -108,8 +109,8 @@ This repository uses two census datasets to demonstrate multi-source data govern
 4. **Update configuration variables** (usually in the second cell):
    - `PROJECT_ID` - Your GCP project ID
    - `REGION` - Your preferred GCP region (e.g., "us-central1")
-   - `INSTANCE_NAME` - CloudSQL instance name (for setup_cloudsql_census.ipynb)
-   - `BUCKET_NAME` - GCS bucket name (for upload_census_to_gcs.ipynb)
+   - `INSTANCE_NAME` - CloudSQL instance name (for `04_setup_cloudsql_census.ipynb`)
+   - `BUCKET_NAME` - GCS bucket name (for `02_upload_census_to_gcs.ipynb`)
    - Other demo-specific variables
 5. **Run cells in order** from top to bottom
 6. **Wait for long-running operations** (CloudSQL creation takes 10-15 minutes)
@@ -176,6 +177,8 @@ Most notebooks include a cell with the exact command to enable all required APIs
 - `roles/dataplex.catalogAdmin` - For Dataplex catalog and glossary operations
 - `roles/cloudsql.admin` - For CloudSQL instance management
 - `roles/compute.networkUser` - For CloudSQL network configuration
+- `roles/datastore.owner` - For Firestore database creation and management
+- `roles/firestore.viewer` - For reading metadata from Firestore
 
 Grant roles using:
 ```bash
@@ -239,21 +242,23 @@ gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
 
 ### Overview
 
-This repository contains a complete Dataplex Universal Catalog demo with five notebooks that should be run sequentially:
+This repository contains a complete Dataplex Universal Catalog demo with seven notebooks that should be run sequentially:
 
 1. **config_and_data_setup.ipynb** - Core BigQuery and Dataplex setup
 2. **upload_census_to_gcs.ipynb** - UK Census data to Cloud Storage and BigQuery
 3. **apply_glossary_terms.ipynb** - Business glossary with ISO 11179 principles
 4. **setup_cloudsql_census.ipynb** - CloudSQL PostgreSQL with Dataplex integration
-5. **cleanup_all_resources.ipynb** - Complete resource cleanup
+5. **setup_firestore.ipynb** - Firestore database setup and CloudSQL metadata storage
+6. **write_firestore_metadata_to_dataplex.ipynb** - Write Firestore metadata to Dataplex Catalog
+7. **99_cleanup_all_resources.ipynb** - Complete resource cleanup
 
-**Total Time:** 45-90 minutes for complete setup  
+**Total Time:** 55-110 minutes for complete setup  
 **Total Cleanup Time:** 15-20 minutes
 
 ---
 
 ### 1. Configuration and Data Setup
-**File:** `setup/config_and_data_setup.ipynb`  
+**File:** `setup/01_config_and_data_setup.ipynb`  
 **Time:** 10-30 minutes  
 **Services:** BigQuery, Dataplex Catalog  
 **Difficulty:** Beginner
@@ -282,7 +287,7 @@ This repository contains a complete Dataplex Universal Catalog demo with five no
 ---
 
 ### 2. Upload Census to Cloud Storage
-**File:** `setup/upload_census_to_gcs.ipynb`  
+**File:** `setup/02_upload_census_to_gcs.ipynb`  
 **Time:** 10-15 minutes  
 **Services:** Cloud Storage, BigQuery  
 **Difficulty:** Beginner
@@ -311,7 +316,7 @@ This repository contains a complete Dataplex Universal Catalog demo with five no
 ---
 
 ### 3. Apply Glossary Terms
-**File:** `setup/apply_glossary_terms.ipynb`  
+**File:** `setup/03_apply_glossary_terms.ipynb`  
 **Time:** 15-25 minutes  
 **Services:** Dataplex Business Glossary, BigQuery  
 **Difficulty:** Intermediate
@@ -326,7 +331,7 @@ This repository contains a complete Dataplex Universal Catalog demo with five no
 - Business-friendly metadata for technical data
 
 **Prerequisites:**
-- Census dataset created (via `config_and_data_setup.ipynb`)
+- Census dataset created (via `01_config_and_data_setup.ipynb`)
 - Required IAM roles:
   - `roles/dataplex.catalogAdmin`
   - `roles/bigquery.admin`
@@ -345,7 +350,7 @@ This repository contains a complete Dataplex Universal Catalog demo with five no
 ---
 
 ### 4. Setup CloudSQL Census Database
-**File:** `setup/setup_cloudsql_census.ipynb`  
+**File:** `setup/04_setup_cloudsql_census.ipynb`  
 **Time:** 20-30 minutes (includes 10-15 min provisioning)  
 **Services:** CloudSQL PostgreSQL, Dataplex Universal Catalog  
 **Difficulty:** Intermediate
@@ -379,8 +384,65 @@ This repository contains a complete Dataplex Universal Catalog demo with five no
 
 ---
 
-### 5. Cleanup All Resources
-**File:** `setup/cleanup_all_resources.ipynb`  
+### 5. Setup Firestore and Store CloudSQL Metadata
+**File:** `setup/05_setup_firestore.ipynb`  
+**Time:** 10-15 minutes  
+**Services:** Firestore, CloudSQL PostgreSQL  
+**Difficulty:** Beginner
+
+**Description:** Enables the Firestore API and creates a Firestore Native Mode database. Then connects to the CloudSQL PostgreSQL instance, creates a copy of the `census_residence_type` table, extracts comprehensive column and index metadata, and stores it in Firestore using a hierarchical `datasets → tables` collection/subcollection schema.
+
+**What You'll Learn:**
+- Firestore Native Mode database creation
+- Extracting schema and statistics metadata from PostgreSQL
+- Hierarchical Firestore document/subcollection patterns
+- Collection Group Queries across multiple datasets
+
+**Prerequisites:**
+- CloudSQL instance running (`04_setup_cloudsql_census.ipynb` completed)
+- Required IAM roles:
+  - `roles/datastore.owner`
+  - `roles/cloudsql.admin`
+
+**Key Features:**
+- Creates Firestore `(default)` database in `us-central1`
+- Creates `census_residence_type_copy` table in CloudSQL with indexes
+- Stores dataset and table metadata documents in Firestore
+- Demonstrates querying metadata across collections
+
+---
+
+### 6. Write Firestore Metadata to Dataplex Catalog
+**File:** `setup/06_write_firestore_metadata_to_dataplex.ipynb`  
+**Time:** 5-8 minutes  
+**Services:** Firestore, Dataplex Universal Catalog  
+**Difficulty:** Intermediate
+
+**Description:** Reads CloudSQL table metadata stored in Firestore and uses it to create a Dataplex Catalog entry for the CloudSQL table. Creates a custom entry group and entry type for CloudSQL resources, then applies the existing `data-governance-public` aspect with UK Census governance metadata.
+
+**What You'll Learn:**
+- Reading metadata from Firestore as a metadata store
+- Creating custom Dataplex entry groups and entry types
+- Manually registering non-BigQuery data sources in Dataplex Catalog
+- Applying governance aspects to custom catalog entries
+
+**Prerequisites:**
+- Firestore metadata created (`05_setup_firestore.ipynb` completed)
+- `data-governance-public` aspect type created (`01_config_and_data_setup.ipynb` completed)
+- Required IAM roles:
+  - `roles/firestore.viewer`
+  - `roles/dataplex.catalogAdmin`
+
+**Key Features:**
+- Creates `cloudsql-entries` custom entry group
+- Creates `cloudsql-table` custom entry type
+- Registers CloudSQL table with Fully Qualified Name (FQN): `cloudsql_postgresql:{project}.{region}.{instance}.{db}.{schema}.{table}`
+- Applies `data-governance-public` aspect (ONS source, Open Government Licence)
+
+---
+
+### 7. Cleanup All Resources
+**File:** `setup/99_cleanup_all_resources.ipynb`  
 **Time:** 15-20 minutes  
 **Services:** BigQuery, Dataplex, CloudSQL, Cloud Storage  
 **Difficulty:** Beginner
@@ -393,7 +455,8 @@ This repository contains a complete Dataplex Universal Catalog demo with five no
 - Deletes BigQuery datasets and all tables (~278 tables)
 - Deletes business glossary, categories, and terms
 - Disables Dataplex integration and deletes CloudSQL instance
-- Optionally deletes Cloud Storage bucket
+- Deletes custom Dataplex entry group, entry type, and entries
+- Optionally deletes Cloud Storage bucket and Firestore database
 
 **⚠️ Warning:**
 - This operation **cannot be undone**
@@ -425,7 +488,7 @@ This repository contains a complete Dataplex Universal Catalog demo with five no
 - [ ] Note the time estimates for long-running operations
 
 ### After the Demo
-- [ ] **CRITICAL: Run cleanup_all_resources.ipynb immediately**
+- [ ] **CRITICAL: Run `99_cleanup_all_resources.ipynb` immediately**
 - [ ] Verify resources are deleted in the GCP Console
 - [ ] Check CloudSQL instances are removed (ongoing charges!)
 - [ ] Review billing to understand costs incurred
@@ -434,25 +497,31 @@ This repository contains a complete Dataplex Universal Catalog demo with five no
 ### Recommended Workflow
 ```bash
 # 1. Core setup (required)
-jupyter notebook setup/config_and_data_setup.ipynb
+jupyter notebook setup/01_config_and_data_setup.ipynb
 
 # 2. UK Census to GCS (required for CloudSQL demo)
-jupyter notebook setup/upload_census_to_gcs.ipynb
+jupyter notebook setup/02_upload_census_to_gcs.ipynb
 
 # 3. Business glossary (optional but recommended)
-jupyter notebook setup/apply_glossary_terms.ipynb
+jupyter notebook setup/03_apply_glossary_terms.ipynb
 
 # 4. CloudSQL with Dataplex integration (optional)
-jupyter notebook setup/setup_cloudsql_census.ipynb
+jupyter notebook setup/04_setup_cloudsql_census.ipynb
 
-# 5. Explore Dataplex Universal Catalog in GCP Console
-# - Search for assets
+# 5. Firestore setup and CloudSQL metadata storage (requires step 4)
+jupyter notebook setup/05_setup_firestore.ipynb
+
+# 6. Write Firestore metadata to Dataplex Catalog (requires steps 1 and 5)
+jupyter notebook setup/06_write_firestore_metadata_to_dataplex.ipynb
+
+# 7. Explore Dataplex Universal Catalog in GCP Console
+# - Search for assets including the custom CloudSQL entry
 # - View metadata and aspects
 # - Browse business glossary
-# - Check CloudSQL catalog entries (after 2-48 hours)
+# - Check CloudSQL catalog entries
 
-# 6. Cleanup (REQUIRED - avoid ongoing charges!)
-jupyter notebook setup/cleanup_all_resources.ipynb
+# 8. Cleanup (REQUIRED - avoid ongoing charges!)
+jupyter notebook setup/99_cleanup_all_resources.ipynb
 ```
 
 ## Getting Help
@@ -462,6 +531,7 @@ jupyter notebook setup/cleanup_all_resources.ipynb
 - [Dataplex Documentation](https://cloud.google.com/dataplex/docs)
 - [Dataplex Universal Catalog](https://cloud.google.com/dataplex/docs/catalog)
 - [CloudSQL for PostgreSQL](https://cloud.google.com/sql/docs/postgres)
+- [Firestore Documentation](https://cloud.google.com/firestore/docs)
 - [BigQuery Documentation](https://cloud.google.com/bigquery/docs)
 - [Python Client Libraries](https://cloud.google.com/python/docs/reference)
 - [ISO 11179 Metadata Registry](https://www.iso.org/standard/50340.html)
@@ -508,6 +578,7 @@ After setup, explore these resources:
   - UK Census: `https://console.cloud.google.com/bigquery?project=<PROJECT_ID>&d=census_uk_2021`
 - **Cloud Storage Bucket**: `https://console.cloud.google.com/storage/browser/<BUCKET_NAME>?project=<PROJECT_ID>`
 - **CloudSQL Instance**: `https://console.cloud.google.com/sql/instances?project=<PROJECT_ID>`
+- **Firestore Database**: `https://console.cloud.google.com/firestore/data?project=<PROJECT_ID>`
 - **Dataplex Catalog Search**: `https://console.cloud.google.com/dataplex/search?project=<PROJECT_ID>`
 - **Dataplex Aspect Types**: `https://console.cloud.google.com/dataplex/govern/aspect-types?project=<PROJECT_ID>`
 - **Business Glossaries**: `https://console.cloud.google.com/dataplex/dp-glossaries?project=<PROJECT_ID>`
@@ -541,4 +612,4 @@ For detailed information about each setup notebook, see [`setup/SETUP_NOTEBOOKS.
 
 If you encounter any issues not covered in this guide, please check the specific notebook's troubleshooting section or open an issue.
 
-**Remember:** Always run `cleanup_all_resources.ipynb` when finished to avoid ongoing charges!
+**Remember:** Always run `99_cleanup_all_resources.ipynb` when finished to avoid ongoing charges!
