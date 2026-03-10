@@ -101,8 +101,9 @@ Run the notebooks in this order:
 
 7. **Explore the Catalog** in [GCP Console](https://console.cloud.google.com/dataplex/search)
 
-8. **`setup/99_cleanup_all_resources.ipynb`** (15-20 min) ⚠️ **REQUIRED**
+8. **`cleanup/99_cleanup_all_resources.ipynb`** (15-20 min) ⚠️ **REQUIRED**
    - Delete all resources to avoid ongoing charges
+   - Or use individual cleanup notebooks in `cleanup/` for selective cleanup
 
 **Total Time:** 55-110 minutes for complete setup
 
@@ -113,14 +114,20 @@ gcp-demo-dataplex/
 ├── README.md                                        # This file
 ├── instructions.md                                  # Detailed getting started guide
 ├── setup/
-│   ├── SETUP_NOTEBOOKS.md                          # Detailed notebook documentation
 │   ├── 01_config_and_data_setup.ipynb              # Core BigQuery + Dataplex setup
 │   ├── 02_upload_census_to_gcs.ipynb               # UK Census to GCS & BigQuery
 │   ├── 03_apply_glossary_terms.ipynb               # Business glossary creation
 │   ├── 04_setup_cloudsql_census.ipynb              # CloudSQL + Dataplex integration
 │   ├── 05_setup_firestore.ipynb                    # Firestore setup + CloudSQL metadata storage
-│   ├── 06_write_firestore_metadata_to_dataplex.ipynb  # Write Firestore metadata to Dataplex Catalog
-│   └── 99_cleanup_all_resources.ipynb              # Complete resource cleanup
+│   └── 06_write_firestore_metadata_to_dataplex.ipynb  # Write Firestore metadata to Dataplex Catalog
+├── cleanup/
+│   ├── 01_cleanup_config_and_data.ipynb            # Remove BigQuery datasets and aspect types
+│   ├── 02_cleanup_gcs_census.ipynb                 # Delete Cloud Storage bucket
+│   ├── 03_cleanup_glossary_terms.ipynb             # Remove business glossary
+│   ├── 04_cleanup_cloudsql.ipynb                   # Delete CloudSQL instance
+│   ├── 05_cleanup_firestore.ipynb                  # Delete Firestore database
+│   ├── 06_cleanup_dataplex_metadata.ipynb          # Remove custom Dataplex entries
+│   └── 99_cleanup_all_resources.ipynb              # Complete cleanup (all resources)
 └── source_data/
     └── census2021-ts001/                           # UK Census 2021 data files
         ├── census2021-ts001-*.csv                  # CSV files (7 geographic levels)
@@ -205,7 +212,6 @@ For detailed troubleshooting, see [instructions.md](instructions.md#common-issue
 ## 📖 Documentation
 
 - **[Getting Started Guide](instructions.md)** - Comprehensive setup and usage instructions
-- **[Setup Notebooks Documentation](setup/SETUP_NOTEBOOKS.md)** - Detailed notebook descriptions
 - [Dataplex Documentation](https://cloud.google.com/dataplex/docs)
 - [Dataplex Universal Catalog](https://cloud.google.com/dataplex/docs/catalog)
 - [Firestore Documentation](https://cloud.google.com/firestore/docs)
@@ -225,8 +231,9 @@ Found an issue or have a suggestion?
 ## ⚠️ Important Reminders
 
 - **Run notebooks in order** - They build on each other
-- **Complete the cleanup notebook** - `99_cleanup_all_resources.ipynb` avoids unnecessary charges
-- **Monitor CloudSQL costs** - Most expensive resource in the demo
+- **Complete the cleanup notebook** - `cleanup/99_cleanup_all_resources.ipynb` avoids unnecessary charges
+- **Individual cleanup available** - Use notebooks in `cleanup/` directory for selective resource deletion
+- **Monitor CloudSQL costs** - Most expensive resource in the demo (prioritize deleting with `cleanup/04_cleanup_cloudsql.ipynb`)
 - **Wait for long operations** - CloudSQL creation takes 10-15 minutes
 - **Check billing alerts** - Set up budget alerts in your project
 - **Firestore is free tier** - Stays within free limits for this demo

@@ -18,15 +18,17 @@ Welcome to the GCP Dataplex demo repository! This collection of Jupyter notebook
 The demo setup creates:
 - BigQuery dataset with ~278 tables (US Census data)
 - CloudSQL PostgreSQL instance (db-f1-micro)
-- Cloud Storage bucket with UK Census 2021 data
+- Cloud Storage buckets (UK Census 2021 data + S3 imported data)
 - Firestore Native Mode database (free tier - no additional cost)
-- Dataplex catalog resources (aspect types, business glossary, custom entry group/type)
+- Dataplex catalog resources (aspect types, business glossary, custom entry groups/types)
+- Data Lineage resources (processes, runs, events)
 
-**Estimated costs**: $10-20 to run the complete demo if cleaned up within 24 hours. However:
-- **Always complete the cleanup notebook** to avoid ongoing charges (especially CloudSQL)
+**Estimated costs**: $10-25 to run the complete demo if cleaned up within 24 hours. However:
+- **Always complete the cleanup notebooks** to avoid ongoing charges (especially CloudSQL)
 - Monitor your billing in the [GCP Console](https://console.cloud.google.com/billing)
 - Set up [budget alerts](https://cloud.google.com/billing/docs/how-to/budgets) for your project
 - CloudSQL instances incur charges even when idle - clean up promptly
+- Data transfer from AWS S3 is free (egress from public buckets), but GCS storage has minimal costs
 
 ## Initial Setup
 
@@ -242,18 +244,19 @@ gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
 
 ### Overview
 
-This repository contains a complete Dataplex Universal Catalog demo with seven notebooks that should be run sequentially:
+This repository contains a complete Dataplex Universal Catalog demo with eight notebooks that should be run sequentially:
 
-1. **config_and_data_setup.ipynb** - Core BigQuery and Dataplex setup
-2. **upload_census_to_gcs.ipynb** - UK Census data to Cloud Storage and BigQuery
-3. **apply_glossary_terms.ipynb** - Business glossary with ISO 11179 principles
-4. **setup_cloudsql_census.ipynb** - CloudSQL PostgreSQL with Dataplex integration
-5. **setup_firestore.ipynb** - Firestore database setup and CloudSQL metadata storage
-6. **write_firestore_metadata_to_dataplex.ipynb** - Write Firestore metadata to Dataplex Catalog
-7. **99_cleanup_all_resources.ipynb** - Complete resource cleanup
+1. **01_config_and_data_setup.ipynb** - Core BigQuery and Dataplex setup
+2. **02_upload_census_to_gcs.ipynb** - UK Census data to Cloud Storage and BigQuery
+3. **03_apply_glossary_terms.ipynb** - Business glossary with ISO 11179 principles
+4. **04_setup_cloudsql_census.ipynb** - CloudSQL PostgreSQL with Dataplex integration
+5. **05_setup_firestore.ipynb** - Firestore database setup and CloudSQL metadata storage
+6. **06_write_firestore_metadata_to_dataplex.ipynb** - Write Firestore metadata to Dataplex Catalog
+7. **07_import_s3_to_gcs_with_lineage.ipynb** - AWS S3 to GCS cross-cloud data transfer with custom lineage
+8. **Cleanup notebooks** in `cleanup/` directory - Individual and complete resource cleanup
 
-**Total Time:** 55-110 minutes for complete setup  
-**Total Cleanup Time:** 15-20 minutes
+**Total Time:** 85-150 minutes for complete setup  
+**Total Cleanup Time:** 20-30 minutes
 
 ---
 
@@ -441,15 +444,77 @@ This repository contains a complete Dataplex Universal Catalog demo with seven n
 
 ---
 
-### 7. Cleanup All Resources
-**File:** `setup/99_cleanup_all_resources.ipynb`  
-**Time:** 15-20 minutes  
-**Services:** BigQuery, Dataplex, CloudSQL, Cloud Storage  
+### 7. Import AWS S3 Data with Cross-Cloud Lineage
+**File:** `setup/07_import_s3_to_gcs_with_lineage.ipynb`  
+**Time:** 30-40 minutes  
+**Services:** AWS S3, Cloud Storage, BigQuery, Dataplex, Data Lineage API  
+**Difficulty:** Advanced
+
+**Description:** Demonstrates cross-cloud lineage tracking by importing American Community Survey data from a public AWS S3 bucket into GCP. Creates custom Dataplex entries for the S3 source and uses the Data Lineage API to establish the complete data provenance chain (S3 → GCS → BigQuery) in Dataplex Universal Catalog.
+
+**What You'll Learn:**
+- Accessing public AWS S3 buckets without credentials (boto3)
+- Streaming data transfer from S3 to GCS
+- Creating custom Dataplex entries for external data sources
+- Using the Data Lineage API to track cross-cloud data movement
+- Establishing lineage relationships between S3, GCS, and BigQuery
+- Visualizing data provenance across cloud platforms
+
+**Prerequisites:**
+- Required IAM roles:
+  - `roles/storage.admin`
+  - `roles/bigquery.admin`
+  - `roles/dataplex.catalogAdmin`
+  - `roles/datacatalog.admin` (for Data Lineage API)
+- BigQuery dataset `census_bureau_acs` created (from `01_config_and_data_setup.ipynb`)
+
+**Key Features:**
+- Connects to public S3 bucket: `s3://dataworld-linked-acs/TabulationQueries/`
+- Transfers CSV file from S3 to GCS with streaming
+- Loads data into BigQuery table: `census_bureau_acs.s3_acs_data`
+- Creates custom entry group: `aws-storage-entries`
+- Creates custom entry type: `s3-object`
+- Registers S3 source with FQN: `s3://dataworld-linked-acs/TabulationQueries/{filename}`
+- Creates two lineage processes:
+  - S3 to GCS Data Import
+  - GCS to BigQuery Load
+- Sends lineage events linking S3 → GCS → BigQuery
+- Enables impact analysis and compliance tracking across clouds
+
+**Why This Matters:**
+- **Cross-Cloud Visibility**: Track data origins from external cloud providers
+- **Compliance & Auditing**: Document data provenance for regulatory requirements
+- **Impact Analysis**: Understand downstream dependencies from external sources
+- **Discovery**: Find data by its original AWS location
+- **Multi-Cloud Strategy**: Manage data governance across cloud platforms
+
+**Cleanup:** Run `cleanup/07_cleanup_s3_lineage.ipynb` to remove:
+- GCS bucket and files
+- BigQuery table
+- Custom Dataplex entries, entry type, and entry group
+- Data Lineage processes, runs, and events
+
+---
+
+### 8. Cleanup All Resources
+**Location:** `cleanup/` directory  
+**Time:** 20-30 minutes (complete cleanup)  
+**Services:** BigQuery, Dataplex, CloudSQL, Cloud Storage, Firestore  
 **Difficulty:** Beginner
 
-**Description:** Complete cleanup notebook that removes all resources created by the setup notebooks. **Critical for cost management** - CloudSQL instances incur ongoing charges even when idle.
+**Description:** Modular cleanup notebooks that remove resources created by the setup notebooks. **Critical for cost management** - CloudSQL instances incur ongoing charges even when idle.
 
-**What It Cleans Up:**
+**Available Cleanup Notebooks:**
+- `01_cleanup_config_and_data.ipynb` - Remove BigQuery datasets and custom aspect types
+- `02_cleanup_gcs_census.ipynb` - Delete Cloud Storage bucket and contents
+- `03_cleanup_glossary_terms.ipynb` - Remove business glossary and terms
+- `04_cleanup_cloudsql.ipynb` - Delete CloudSQL instance
+- `05_cleanup_firestore.ipynb` - Delete Firestore database
+- `06_cleanup_dataplex_metadata.ipynb` - Remove custom Dataplex entries and entry groups
+- `07_cleanup_s3_lineage.ipynb` - Remove S3 lineage demo resources
+- `99_cleanup_all_resources.ipynb` - **Complete cleanup of all resources**
+
+**What the Complete Cleanup Does:**
 - Removes all Dataplex aspects from BigQuery tables
 - Deletes custom aspect types
 - Deletes BigQuery datasets and all tables (~278 tables)
@@ -462,7 +527,7 @@ This repository contains a complete Dataplex Universal Catalog demo with seven n
 - This operation **cannot be undone**
 - All data will be **permanently deleted**
 - All custom metadata will be removed
-- Run this notebook as soon as you finish exploring the demo
+- Run cleanup notebooks as soon as you finish exploring the demo
 
 **Prerequisites:**
 - Same IAM roles as setup notebooks
@@ -488,7 +553,8 @@ This repository contains a complete Dataplex Universal Catalog demo with seven n
 - [ ] Note the time estimates for long-running operations
 
 ### After the Demo
-- [ ] **CRITICAL: Run `99_cleanup_all_resources.ipynb` immediately**
+- [ ] **CRITICAL: Run `cleanup/99_cleanup_all_resources.ipynb` immediately**
+- [ ] Or run individual cleanup notebooks as needed
 - [ ] Verify resources are deleted in the GCP Console
 - [ ] Check CloudSQL instances are removed (ongoing charges!)
 - [ ] Review billing to understand costs incurred
@@ -514,14 +580,28 @@ jupyter notebook setup/05_setup_firestore.ipynb
 # 6. Write Firestore metadata to Dataplex Catalog (requires steps 1 and 5)
 jupyter notebook setup/06_write_firestore_metadata_to_dataplex.ipynb
 
-# 7. Explore Dataplex Universal Catalog in GCP Console
+# 7. AWS S3 to GCS cross-cloud lineage (optional - advanced demo)
+jupyter notebook setup/07_import_s3_to_gcs_with_lineage.ipynb
+
+# 8. Explore Dataplex Universal Catalog in GCP Console
 # - Search for assets including the custom CloudSQL entry
 # - View metadata and aspects
 # - Browse business glossary
 # - Check CloudSQL catalog entries
+# - View lineage graph for S3 → GCS → BigQuery data flow
 
-# 8. Cleanup (REQUIRED - avoid ongoing charges!)
-jupyter notebook setup/99_cleanup_all_resources.ipynb
+# 9. Cleanup (REQUIRED - avoid ongoing charges!)
+# Option A: Complete cleanup (all resources)
+jupyter notebook cleanup/99_cleanup_all_resources.ipynb
+
+# Option B: Individual cleanup (selective cleanup)
+jupyter notebook cleanup/01_cleanup_config_and_data.ipynb
+jupyter notebook cleanup/02_cleanup_gcs_census.ipynb
+jupyter notebook cleanup/03_cleanup_glossary_terms.ipynb
+jupyter notebook cleanup/04_cleanup_cloudsql.ipynb  # PRIORITY - CloudSQL costs!
+jupyter notebook cleanup/05_cleanup_firestore.ipynb
+jupyter notebook cleanup/06_cleanup_dataplex_metadata.ipynb
+jupyter notebook cleanup/07_cleanup_s3_lineage.ipynb
 ```
 
 ## Getting Help
@@ -608,8 +688,6 @@ After learning from these demos, consider these topics for production Dataplex d
 
 **Happy Learning! 🎓**
 
-For detailed information about each setup notebook, see [`setup/SETUP_NOTEBOOKS.md`](setup/SETUP_NOTEBOOKS.md).
-
 If you encounter any issues not covered in this guide, please check the specific notebook's troubleshooting section or open an issue.
 
-**Remember:** Always run `99_cleanup_all_resources.ipynb` when finished to avoid ongoing charges!
+**Remember:** Always run `cleanup/99_cleanup_all_resources.ipynb` when finished to avoid ongoing charges!
